@@ -1,1 +1,1 @@
-# drawing
+A simple Javascript implementation to allow you to add drawing or annotation to any webpage.
