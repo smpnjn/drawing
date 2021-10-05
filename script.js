@@ -2,30 +2,48 @@
     // Ensure drawing layer is at root
     document.body.appendChild(document.getElementById('drawing-layer'));
 
+    // Manage Main UI
+    // Add a pointerdown event for each color and tool.
+    // When a user clicks a color or tool, then we set it to our current config.color or config.tool respectively, and highlight it on the UI
+    [ 'data-rColor', 'data-tool' ].forEach(function(i) {
+        document.querySelectorAll(`[${i}]`).forEach(function(item) {
+            item.addEventListener('pointerdown', function(e) {
+                document.querySelectorAll(`[${i}]`).forEach(function(i) {
+                    i.setAttribute('data-current', false);
+                });
+                item.setAttribute('data-current', true);
+                if(i == 'data-rColor') {
+                    config.color = item.getAttribute(i);
+                } else if(i == 'data-tool') {
+                    config.tool = item.getAttribute(i);
+                }
+            });
+        });
+    });
+
     let config = {
-        drawing: false,
-        tool: 'freeHand',
-		color : 'white',
-        drawing: false,
-        strokeWidth: 4,
-        configNormalisation: 12,
-        hyp: [ 0, 0, 0 ],
+        drawing: false,         // Set to true if we are drawing, false if we aren't
+        tool: 'freeHand',       // The currently selected tool
+		color : 'white',        // The currently selected colour
+        strokeWidth: 4,         // The width of the lines we draw
+        configNormalisation: 12,// The average normalisation for pencil drawing
     }
 
     let arrow = {
+        // topX, Y, and bottomX, Y store information on the arrows top and bottom ends
 		topX: 0,
 		topY: 0,
-		bottomX: 0,
-		activeDirection: 'se',
-	    arrowClasses: [ 'nw', 'ne', 'sw', 'se' ],
-		lineAngle: 0,
-		bottomY: 0
+		bottomX: 0,      
+		bottomY: 0,          
+		activeDirection: 'se',                    // This is the current direction of the arrow, i.e. south-east
+	    arrowClasses: [ 'nw', 'ne', 'sw', 'se' ], // These are possible arrow directions
+		lineAngle: 0,                             // This is the angle the arrow point at about the starting point
 	}
     let freeHand = {
-		currentPathText: 'M0 0 ',
-		topX: 0,
-		topY: 0,
-        lastMousePoints: [ [0, 0] ],
+		currentPathText: 'M0 0 ',      // This is the current path of the pencil line, in text
+		topX: 0,                       // The starting X coordinate
+		topY: 0,                       // The starting Y coordinate
+        lastMousePoints: [ [0, 0] ],   // This is the current path of the pencil line, in array
     }
 
     let svgEl = {
@@ -54,27 +72,8 @@
 		</div>`
 	}
 
-    // Manage main UI
-    document.querySelectorAll('[data-color]').forEach(function(item) {
-        item.addEventListener('pointerdown', function(e) {
-            document.querySelectorAll('[data-color]').forEach(function(i) {
-                i.setAttribute('data-current', false);
-            });
-            item.setAttribute('data-current', true);
-            config.color = item.getAttribute('data-rColor');
-        })
-    });
- 
-    document.querySelectorAll('[data-tool]').forEach(function(item) {
-        item.addEventListener('pointerdown', function(e) {
-            document.querySelectorAll('[data-tool]').forEach(function(i) {
-                i.setAttribute('data-current', false);
-            });
-            item.setAttribute('data-current', true);
-            config.tool = item.getAttribute('data-tool');
-        })
-    });
-
+    // Set the body attribute 'data-drawing' to true or false, based on if the user clicks the 'Start Drawing' button
+    // Also sets config.drawing to true or false.
     document.getElementById('start-drawing').addEventListener('click', function(e) {
         if(config.drawing === true) {
             config.drawing = false;
@@ -86,41 +85,45 @@
         }
     });
 
+    // Closes the drawing box and sets 'data-drawing' on the body element to false
+    // Along with cofig.drawing to false.
     document.querySelector('#drawing-box .close').addEventListener('click', function(e) {
         document.body.setAttribute('data-drawing', false);
         config.drawing = false;
     })
 
     document.body.addEventListener('pointerdown', function(e) {
-        // Generate id
+        
+        // Generate id for each element
         let id = helper.generateId();
     
         if(config.tool == 'arrow' && config.drawing == true) {
-            
             // Set arrow start point
             arrow.topX = e.clientX;
             arrow.topY = e.clientY;
 
-            
             // Add element to drawing layer
 			document.getElementById('drawing-layer').innerHTML = document.getElementById('drawing-layer').innerHTML + 
             svgEl.arrowPath(  [ arrow.topX + window.scrollX, arrow.topY + window.scrollY ], [  e.clientX, e.clientX ], `M0 0 L0 0`, 'arrow-item', arrow.arrowClasses[3], [ 0, 0 ], 0, [ 0, 0, 0 ], id );
         }
         else if(config.tool == 'freeHand' && config.drawing == true) {
 
-            // Set the starting point
+            // Set the drawing starting point
             freeHand.topX = e.clientX;
             freeHand.topY = e.clientY;
 
+            // Set the current path and most recent mouse points to whereever we are scrolled on the page
             freeHand.currentPathText = `M${window.scrollX} ${window.scrollY} `;
-
             freeHand.lastMousePoints = [[ window.scrollX, window.scrollY ]];
             
+            // Add element to the drawing layer
             document.getElementById('drawing-layer').innerHTML = document.getElementById('drawing-layer').innerHTML + 
             svgEl.drawPath( [ e.clientX, e.clientY ], [ e.clientX, e.clientY ], ``, id);
         } 
         else if(config.tool == 'eraser' && config.drawing == true) {
+            // Check if user has clicked on an svg
             if(helper.parent(e.target, '.drawing-el', 1) !== null && helper.parent(e.target, '.drawing-el', 1).matches('.drawing-el')) {
+                // If they have, delete it
                 helper.parent(e.target, '.drawing-el', 1).remove();
             }
         }
@@ -128,20 +131,29 @@
 
     document.body.addEventListener('pointermove', function(e) {
 
+        // Assuming there is a current item to in the drawing layer
         if(document.querySelector('#drawing-layer .current-item') !== null) {
+            // If we are using the arrow tool
             if(config.drawing == true && config.tool == 'arrow') {
+                // Then get the original start position
                 let startX = arrow.topX;
                 let startY = arrow.topY;
+                // Set a default angle of 90
                 let angleStart = 90;
                 
+                // And a default direction of 'south east'
                 let arrowClass = arrow.arrowClasses[3];
-                let endX = e.pageX - arrow.topX - window.scrollX;
-                let endY = e.pageY - arrow.topY - window.scrollY;
+                // Calculate how far the user has moved their mouse from the original position
+                let endX = e.pageX - startX - window.scrollX;
+                let endY = e.pageY - startY - window.scrollY;
 
+                // And using that info, calculate the arrow's angle
                 helper.calculateArrowLineAngle(endX, endY);
+                // Then update the config to this new end position
                 arrow.bottomX = endX;
                 arrow.bottomY = endY;
                 
+                // And update the HTML to show the new arrow to the user
                 document.querySelector('#drawing-layer .arrow.current-item').classList.remove('static');
                 document.querySelector('#drawing-layer .arrow.current-item').setAttribute('data-direction', arrow.activeDirection);
                 document.querySelector('#drawing-layer .arrow.current-item svg').setAttribute('viewbox', `0 ${endX} 0 ${endY}`);
@@ -149,15 +161,18 @@
             }
             
             else if(config.drawing == true && config.tool == 'freeHand') {
+                // Similar to arrows, calculate the user's end position
                 let endX = e.pageX - freeHand.topX;
                 let endY = e.pageY - freeHand.topY;
                 
+                // And push these new coordinates to our config
                 let newCoordinates = [ endX, endY ];
                 freeHand.lastMousePoints.push([endX, endY]);
                 if(freeHand.lastMousePoints.length >= config.configNormalisation) {
                     freeHand.lastMousePoints.shift();
                 }
                 
+                // Then calculate the average points to display a line to the user
                 let avgPoint = helper.getAveragePoint(0);
                 if (avgPoint) {
                     freeHand.currentPathText += " L" + avgPoint.x + " " + avgPoint.y;
@@ -178,23 +193,28 @@
 			
     });
 
+    // Whenever the user leaves the page with their mouse or lifts up their cursor
     [ 'mouseleave', 'pointerup' ].forEach(function(item) {
         document.body.addEventListener(item, function(e) {
+            // Remove current-item class from all elements, and give all SVG elements pointer-events
             document.querySelectorAll('#drawing-layer > div').forEach(function(item) {
                 item.style.pointerEvent = 'all';
                 item.classList.remove('current-item');
+                // Delete any 'static' elements
                 if(item.classList.contains('static')) {
                     item.remove();
                 }
             });
-
+            // Reset freeHand variables where needed
             freeHand.currentPathText = 'M0 0 ';
             freeHand.lastMousePoints = [ [0, 0] ];
-
         });
     });
 
+
     let helper = {
+        // This averages out a certain number of mouse movements for free hand drawing
+        // To give our lines a smoother effect
         getAveragePoint: function(offset) {
             let len = freeHand.lastMousePoints.length;
             if (len % 2 === 1 || len >= 8) {
@@ -216,6 +236,7 @@
             }
             return null;
         },
+        // This calculates the angle and direction of a moving arrow
         calculateArrowLineAngle: function(lineEndX, lineEndY) {
 			
 			var calcLineEndX = lineEndX;
@@ -251,12 +272,14 @@
 			
 			arrow.lineAngle = angle + angleStart;
 		},
+        // This generates a UUID for our drawn elements
         generateId: function() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
         },
+        // This function matches parent elements allowing us to select a parent element
         parent: function(el, match, last) {
             var result = [];
             for (var p = el && el.parentElement; p; p = p.parentElement) {
