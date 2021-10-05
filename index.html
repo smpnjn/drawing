@@ -1,0 +1,31 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Drawing Tools</title>
+        <link href="style.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <button class="animated hover-button" id="start-drawing"><span>✍️ Activate Drawing</span></button>
+        <div id="drawing-cover"></div>
+        <div id="drawing-layer"></div>
+        <div id="drawing-box">
+            <div class="tools">
+                <button data-tool="freeHand" data-current="true"><span>Pen</span></button>
+                <button data-tool="arrow" ><span>Arrow</span></button>
+                <button data-tool="eraser" ><span>Eraser</span></button>
+            </div>
+            <div class="colors">
+                <div data-color="white" data-rColor="white" data-current="true"></div>
+                <div data-color="black" data-rColor="#544141"></div>
+                <div data-color="red" data-rColor="#d83030"></div>
+                <div data-color="green" data-rColor="#30d97d"></div>
+                <div data-color="orange" data-rColor="#ff9000"></div>
+                <div data-color="yellow" data-rColor="f3f326"></div>
+            </div>
+            <div class="close">
+                Close
+            </div>
+        </div>
+        <script src="script.js"></script>
+    </body>
+</html>
